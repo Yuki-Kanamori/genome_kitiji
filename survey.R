@@ -11,6 +11,9 @@ dir_output4 = "/Users/Yuki/Dropbox/sokouo1/春調査/Apr"
 dir_input6 = "/Users/Yuki/Dropbox/sokouo1/春調査/Jun"
 dir_output6 = "/Users/Yuki/Dropbox/sokouo1/春調査/Jun"
 
+dir_input = "/Users/Yuki/Dropbox/sokouo1/春調査"
+dir_output = "/Users/Yuki/Dropbox/sokouo1/春調査"
+
 # data ----------------------------------------------------------
 #=== 4月 ===#
 setwd(dir_input4)
@@ -52,14 +55,21 @@ df = rbind(df4 %>% filter(魚種NO == 4) %>% select(STATIONコード, 水深, �
 sum = df %>% dplyr::group_by(year, month) %>% dplyr::summarize(sum = sum(漁獲尾数))
 
 
-# == 調査点ごとの漁獲尾数 == #
-unique(df$STATIONコード)
-setwd(dir_input4)
-lonlat = read.csv("lonlat.csv", fileEncoding = "CP932")
 
 df2 = df %>% group_by(year, month, STATIONコード, 水深) %>% summarize(sum = sum(漁獲尾数))
+check = left_join(df2, sum %>% dplyr::rename(total = sum), by = c("year", "month")) %>% mutate(freq = sum/total)
+setwd(dir_output)
+write.csv(check, "check.csv")
+
+
+
+# == 調査点ごとの漁獲尾数 == #
+unique(df$STATIONコード)
+setwd(dir_input)
+lonlat = read.csv("lonlat.csv", fileEncoding = "CP932")
+lonlat = lonlat %>% mutate(lon = lon1+lon2/60, lat = lat1+lat2/60) %>% select(-lon1, -lon2, -lat1, -lat2)
+lonlat = lonlat %>% group_by(year, month, STATIONコード, 水深) %>% summarise(lon = mean(lon), lat = mean(lat))
 df2 = left_join(df2, lonlat, by = c("year", "month", "STATIONコード", "水深"))
-df2 = df2 %>% mutate(lon = lon1+lon2/60, lat = lat1+lat2/60) %>% select(-lon1, -lon2, -lat1, -lat2)
 summary(df2)
 
 # map
@@ -90,14 +100,3 @@ th = theme(panel.grid.major = element_blank(),
 
 g+p+c+f+theme_bw(base_family = "HiraKakuPro-W3")+labs+th
 
-
-# == 集計し直し == #
-df2 = df2 %>% group_by(year, month, STATIONコード, 水深) %>% summarise(sum = sum(sum))
-
-df3 = left_join(df2, sum %>% dplyr::rename(total = sum), by = c("year", "month")) %>% mutate(freq = sum/total)
-
-check = df3 %>% group_by(year, month, STATIONコード, 水深) %>% summarise(sum = sum(sum), total = mean(total), freq = sum(freq))
-
-setwd(dir_output4)
-write.csv(df3, "df3.csv")
-write.csv(check, "check.csv")
